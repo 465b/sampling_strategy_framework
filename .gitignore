@@ -1,0 +1,37 @@
+# editor / workspace
+*.code-workspace
+/.vscode
+
+# python
+*.pyc
+__pycache__/
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Rendered media and documents, which are outputs rather than sources. Scoped to
+# the places that generate them: docs/ is hand-written and may legitimately carry
+# a figure, and a blanket `*.png` would make that silently unversionable.
+/figures/
+/examples/**/*.png
+/examples/**/*.pdf
+/examples/**/*.mp4
+/examples/**/*.html
+
+# Generated caches, not sources. The release points are a deterministic function
+# of the config and the hindcast - regenerating cape_rodney's 400 reproduces them
+# byte for byte in 5 s - so committing them would pin a derived artifact and stop
+# the examples ever exercising the generation path.
+*_lloyd_points.csv
+
+# Your experiments are yours. `experiments/` is ignored in full - drop a site
+# directory in it and nothing about your grids, polygons or configs reaches this
+# repository. The maintained examples live in `examples/` instead, so this needs
+# no per-file exceptions.
+/experiments/

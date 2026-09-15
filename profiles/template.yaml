@@ -1,0 +1,39 @@
+# This file holds everything that is true of *your computer* rather than of the
+# experiment: where hindcasts live, where output goes, how much parallelism the
+# machine can take. Site configs must never contain absolute paths; they name a
+# hindcast and the profile resolves it. That is what lets the same experiment run
+# unchanged on a desktop and on a cluster.
+
+# Logical hindcast name -> where that hindcast is on this machine. The name on
+# the left is what a site config's `hindcast:` refers to.
+#
+# `input_dir` and `file_mask` go straight to OceanTracker's reader, which detects
+# the format from the files themselves - SCHISM, ROMS, FVCOM, DELFT3D-FM - so
+# nothing here is specific to any one of them.
+hindcasts:
+  hauraki_gulf:
+    input_dir: /path/to/hindcast/
+    file_mask: "*.nc"
+
+  # my_other_hindcast: /path/to/other/hindcast
+  # file_mask: "only_these_files_*.nc"
+
+
+# Where run output is written. One subdirectory per run: <output_root>/<run_name>/
+output_root: /path/to/output
+
+# Optional: the interpreter that runs a chunk. Leave unset to use the active one.
+# Set an absolute path to pin a specific environment - useful when the process
+# submitting chunks is not the environment they should run in.
+# python: /path/to/venv/bin/python
+
+# Optional: somewhere fast for derived products that are not a run's output -
+# currently the mesh cache. Defaults to output_root when unset.
+# scratch: /path/to/scratch
+
+# How many chunks `edna submit` runs at once on this machine.
+local:
+  n_parallel_jobs: 4
+
+# There is no scheduler section. `edna submit` runs chunks locally; on a cluster
+# you can't submit all chunks at one run  `edna run --chunk N` with your own job script.

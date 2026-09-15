@@ -1,0 +1,51 @@
+# Cape Rodney - the simple case: one site, one 2D statistic.
+#
+# Copy this to experiments/<yours>/, edit, and bump `version:` - which keys both
+# the output directory and the release-point cache, so it forks both rather than
+# reusing an earlier version's sources.
+#
+# The statistic is a gridded_2d with a full depth vertical tow.
+
+name: cape_rodney
+version: v00
+
+domain: target_area.csv
+
+hindcast: hauraki_gulf                 # resolved by the machine profile
+
+release_points:
+  n: 100
+  depth_range: [0, 30]           # metres; sources sit on the bed within this band
+  # 1.0 keeps only mesh triangles that are wet for the whole hindcast record,
+  # excluding intertidal flats that pass depth_range but dry out. Without this
+  # they show up as sources undetectable from anywhere.
+  min_flooded_fraction: 1.0
+  
+source:
+  # one mussel-like source: 1e7 eDNA copies per hour, discretised at
+  # 1000 copies per particle -> 333 particles per 120 s release
+  shedding_rate_per_hour: 1.0e7
+  copies_per_particle: 100
+  release_at_bottom: true
+  release_offset_from_surface_or_bottom: 1
+
+model:
+  start: '2018-01-01T01:00:00'
+  time_step: 120                 # seconds
+  duration_hours: 48
+  edna_half_life_hours: 6
+  critical_friction_velocity: 0.000 # always resuspend
+  output_time_interval: 3600
+  processors: 4
+
+stats:
+  - name: around_cape_rodney_2D
+    kind: gridded_2d
+    grid_center: [174.82211, -36.27802]
+    rows: 250
+    cols: 250
+    span: [0.05, 0.05]
+    water_depth_min: 5
+    status_list: [moving]
+    start: '2018-01-02T01:00:00'
+    end: '2018-01-03T01:00:00'

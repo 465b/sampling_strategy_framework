@@ -1,0 +1,28 @@
+# Conda environment for the eDNA sampling-strategy framework.
+#
+#   conda env create -f environment.yml
+#   conda activate edna-sampling
+#   pip install -e .            # this package, oceantracker included
+#
+# The compiled/binary stack (numba, netCDF4, shapely, pyproj) comes from
+# conda-forge because those wheels are the fiddly ones on HPC; oceantracker
+# itself is PyPI-only and comes from the pip step above, together with this
+# package's own dependency pins from pyproject.toml.
+name: edna-sampling
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - scipy
+  - xarray
+  - netcdf4
+  - numba
+  - matplotlib
+  - shapely
+  - pyproj
+  - pyyaml
+  - ipykernel
+  - jupyter
+  - pytest

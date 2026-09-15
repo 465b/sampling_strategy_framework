@@ -1,0 +1,69 @@
+# Cape Rodney, v33 - the run the paper figures are built from.
+#
+# Reproduces archiv/legacy_model_configuration/model_configuration_cape_rodney.py exactly;
+# tests/test_params_equivalence.py asserts that field for field.
+name: cape_rodney
+version: v33
+
+domain: cape_rodney_poly_4km.csv
+
+hindcast: hauraki_gulf
+
+release_points:
+  n: 400
+  depth_range: [5, 30]           # metres; sources sit on the bed within this band
+  seed: 42
+
+source:
+  # one mussel-like source: 1e7 eDNA copies per hour, discretised at
+  # 1000 copies per particle -> 333 particles per 120 s release
+  shedding_rate_per_hour: 1.0e7
+  copies_per_particle: 1000
+  release_at_bottom: true
+  release_offset_from_surface_or_bottom: 1
+  max_cycles_to_find_release_points: 59
+
+model:
+  time_step: 120                 # seconds
+  duration_hours: 47
+  edna_half_life_hours: 6
+  critical_friction_velocity: 0.009
+  output_time_interval: 3600
+  processors: 20
+  # Inert: oceantracker caps this with min(forecasted_max_number_alive, ...), so
+  # the buffer actually holds ~175k particles. Changing it does not move memory
+  # at all (measured).
+  particle_buffer_per_release_group: 100000000
+  time_buffer_size: 25
+  screen_output_time_interval: 120
+  write_tracks: false
+  tracks_writer_skip_properties:
+    - water_velocity
+    - particle_velocity
+    - velocity_modifier
+    - x_last_good
+    - age
+    - tide
+    - water_depth
+    - salinity
+
+chunking:
+  release_groups_per_chunk: 1
+
+stats:
+  - name: around_cape_rodney_3D
+    kind: gridded_3d
+    grid_center: [174.82211, -36.27802]
+    rows: 250
+    cols: 250
+    span: [0.05, 0.05]
+    layers: 20
+    z_min: 0
+    z_max: 20
+    vertical_range_measured_relative_to: surface
+    water_depth_min: 10
+    status_list: [moving]
+    start: '2018-01-02T00:00:00'
+    end: '2018-01-03T00:00:00'
+    write_connectivity: false
+    release_group_centered_grids: false

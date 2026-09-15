@@ -1,0 +1,106 @@
+{
+  "max_run_duration": 169200,
+  "output_file_base": "v2_auckland_bay_chunk_001",
+  "particle_buffer_initial_size": 100000000,
+  "particle_statistics": [
+    {
+      "class_name": "oceantracker.particle_statistics.gridded_statistics3D.GriddedStats3D_timeBased",
+      "cols": 200,
+      "end": "2018-01-03T00:00:00",
+      "grid_center": [
+        174.7331,
+        -36.824
+      ],
+      "layers": 20,
+      "name": "full_auckland_bay_3D_geoid",
+      "release_group_centered_grids": false,
+      "rows": 200,
+      "span_x": 0.3,
+      "span_y": 0.3,
+      "start": "2018-01-02T00:00:00",
+      "status_list": [
+        "moving"
+      ],
+      "update_interval": 3600,
+      "vertical_range_measured_relative_to": "geoid",
+      "water_depth_min": 3,
+      "write_connectivity": false,
+      "z_max": 20,
+      "z_min": 0
+    },
+    {
+      "class_name": "oceantracker.particle_statistics.gridded_statistics3D.GriddedStats3D_timeBased",
+      "cols": 200,
+      "end": "2018-01-03T00:00:00",
+      "grid_center": [
+        174.7331,
+        -36.824
+      ],
+      "layers": 20,
+      "name": "full_auckland_bay_3D",
+      "release_group_centered_grids": false,
+      "rows": 200,
+      "span_x": 0.3,
+      "span_y": 0.3,
+      "start": "2018-01-02T00:00:00",
+      "status_list": [
+        "moving"
+      ],
+      "update_interval": 3600,
+      "vertical_range_measured_relative_to": "surface",
+      "water_depth_min": 3,
+      "write_connectivity": false,
+      "z_max": 20,
+      "z_min": 0
+    }
+  ],
+  "processors": 20,
+  "reader": {
+    "file_mask": "schout_*.nc",
+    "input_dir": "<HINDCAST_DIR>"
+  },
+  "release_groups": [
+    {
+      "max_cycles_to_find_release_points": 59,
+      "name": "node_0000",
+      "points": [
+        [
+          174.6959119639488,
+          -36.83553499893971
+        ]
+      ],
+      "pulse_size": 333,
+      "release_at_bottom": true,
+      "release_interval": 120,
+      "release_offset_from_surface_or_bottom": 1
+    }
+  ],
+  "resuspension": {
+    "critical_friction_velocity": 0.009
+  },
+  "root_output_dir": "<OUTPUT_ROOT>/v2_auckland_bay_chunked",
+  "screen_output_time_interval": 120,
+  "time_buffer_size": 25,
+  "time_step": 120,
+  "tracks_writer": {
+    "turn_off_write_particle_properties_list": [
+      "water_velocity",
+      "particle_velocity",
+      "velocity_modifier",
+      "x_last_good",
+      "age",
+      "tide",
+      "water_depth",
+      "salinity"
+    ],
+    "update_interval": 3600
+  },
+  "trajectory_modifiers": [
+    {
+      "class_name": "CullRate",
+      "decay_rate": 3.2090147248145615e-05,
+      "name": "eDNA decay"
+    }
+  ],
+  "write_tracks": false
+}

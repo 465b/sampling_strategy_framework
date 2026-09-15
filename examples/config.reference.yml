@@ -1,0 +1,315 @@
+# yaml-language-server: $schema=../schemas/site-config.schema.json
+#
+# SITE CONFIG REFERENCE - every option, with its default and what it does.
+#
+# This is documentation, not a starting point. It loads, but it is not meant to
+# be run: it defines five statistics so that every vertical mode has somewhere
+# to be shown, and each one costs memory and time. To start an experiment, copy
+# examples/cape_rodney/config.yml instead and add from here as needed.
+#
+# Keys shown with `# default:` may be deleted; the value given is what you get
+# by leaving them out. Keys without that note are required.
+#
+# The machine-readable version of this file is
+# schemas/site-config.schema.json, which your editor reads via the modeline on
+# line 1. tests/test_schemas.py holds both to edna_sampling/config.py, so
+# neither can drift from the parser.
+
+# ---------------------------------------------------------------- identity --
+
+# Site name. With `version` it forms run_name = "<version>_<name>", which keys
+# the output directory and the release-point cache.
+name: reference
+
+# Bumping this forks both the output directory and the release-point cache,
+# rather than silently reusing an earlier version's sources.
+version: v00
+
+# The model-area polygon, as a path RELATIVE to this config. Sources are spread
+# over (this polygon AND the depth band AND, optionally, the always-flooded
+# area). An absolute path is rejected: it would bind the experiment to one
+# machine.
+domain: target_area.csv
+
+# Logical hindcast name. The machine profile resolves it to a directory, which
+# is what lets the same experiment run unchanged anywhere. A name, never a path.
+hindcast: hauraki_gulf
+
+# ----------------------------------------------------------- source layout --
+
+# Where the eDNA sources go. Points are spread by Lloyd relaxation, uniformly
+# per unit SEABED AREA - there is no depth or volume weighting, so the depth
+# distribution of the sources is the region's own hypsometry.
+release_points:
+  # Number of sources. Also the number of chunks, at one release group per chunk.
+  n: 100
+
+  # [min, max] water depth in metres; sources sit on the bed within this band.
+  # Needs min < max.
+  depth_range: [0, 30]
+
+  # Seed for the initial random scatter the relaxation then evens out. Fixing it
+  # makes the point set reproducible byte for byte.
+  seed: 42                              # default: 42
+
+  # Fraction of the hindcast record, in (0, 1], a location must be wet to be
+  # eligible. 1.0 keeps only cells that are never dry, which excludes intertidal
+  # flats that pass depth_range but dry out - without it they show up as sources
+  # undetectable from anywhere.
+  #
+  # This is the one setting that is NOT hindcast-format agnostic: it reads
+  # SCHISM's `wetdry_node` directly, because no other format exposes an
+  # equivalent through OceanTracker. Delete it for a non-SCHISM hindcast.
+  min_flooded_fraction: 1.0             # default: null (filter off)
+
+# ---------------------------------------------------------------- shedding --
+
+# What one source is, and how it is discretised into particles.
+source:
+  # eDNA copies shed per hour by one source.
+  shedding_rate_per_hour: 1.0e+7
+
+  # Copies one model particle stands for - the Monte-Carlo resolution.
+  #
+  # Pulse size is (shedding_rate_per_hour / 3600 / copies_per_particle) x
+  # time_step, so HALVING this doubles the particle count and the run cost.
+  # It must leave at least one particle per release or the config is rejected.
+  #
+  # It also sets the floor on detectability. Detection compares an integer
+  # particle count against threshold_copies, so if one particle is worth more
+  # than the threshold, "detected" degenerates into "at least one particle
+  # arrived" and the detectability map steps at whole particles.
+  copies_per_particle: 1000
+
+  # Release on the sea bed rather than at the surface.
+  release_at_bottom: true               # default: true
+
+  # Metres off the bed (or surface) to release at.
+  release_offset_from_surface_or_bottom: 1.0    # default: 1.0
+
+  # OceanTracker retries when a release point lands in a dry or invalid cell.
+  max_cycles_to_find_release_points: 10  # default: 10
+
+# ------------------------------------------------------------------- model --
+
+# OceanTracker run settings that are not about statistics.
+model:
+  # Tracking time step in seconds. Also the release interval: one pulse per step.
+  time_step: 120
+
+  # How long the run covers, in hours.
+  duration_hours: 48
+
+  # eDNA decay half-life in hours. Decay is Poisson:
+  #     dN/dt = R - alpha*N,  alpha = ln(2)/half_life
+  #     N(t)  = (R/alpha) * (1 - exp(-alpha*t))
+  # so the population saturates at R/alpha. That equilibrium, plus a 1.2 margin,
+  # is what the particle buffer is derived from.
+  edna_half_life_hours: 6
+
+  # Bed friction velocity below which settled particles are NOT resuspended, in
+  # m/s. 0 means always resuspend. Required rather than defaulted because it
+  # materially changes the answer.
+  critical_friction_velocity: 0.0
+
+  # ISO-8601 datetime when releases begin. QUOTE IT, or YAML parses it as a
+  # timestamp object. Unset means the start of whatever hindcast files the
+  # profile points at. Part of the config fingerprint.
+  start: '2018-01-01T01:00:00'          # default: null
+
+  # Seconds between statistics updates.
+  output_time_interval: 3600            # default: 3600.0
+
+  # Threads OceanTracker uses WITHIN one chunk. Multiply by the profile's
+  # local.n_parallel_jobs for the real load on the machine - that product
+  # oversubscribing the cores is the usual cause of a slow run.
+  processors: 4                         # default: 20
+
+  # Override the particle buffer. Left null it is derived from the decay physics
+  # above, which is almost always right; set it only to diagnose a buffer error.
+  particle_buffer_per_release_group: null   # default: null (derive it)
+
+  # Hindcast time steps OceanTracker holds in memory.
+  time_buffer_size: 25                  # default: 25
+
+  # Seconds between progress lines.
+  screen_output_time_interval: 3600     # default: 3600.0
+
+  # Write per-particle trajectories. Large - diagnostics only, not production.
+  write_tracks: false                   # default: false
+
+  # Particle properties to leave out of the track file.
+  tracks_writer_skip_properties: []     # default: []
+
+# -------------------------------------------------------------- statistics --
+
+# The gridded products the run accumulates. Names must be unique.
+#
+# The five entries below exist to show every vertical mode in one file. A real
+# config usually has one.
+stats:
+
+  # -- 2D, whole column ------------------------------------------------------
+  # No vertical selection: the concentration is averaged over the full depth.
+  # This is what a full-depth tow samples.
+  - name: whole_column_2D
+    kind: gridded_2d                    # gridded_2d | gridded_3d
+
+    # [lon, lat] centre of the statistics grid.
+    grid_center: [174.82211, -36.27802]
+
+    rows: 250                           # grid cells in y
+    cols: 250                           # grid cells in x
+
+    # [span_x, span_y] of the grid in DEGREES, not metres.
+    span: [0.05, 0.05]
+
+    # ISO-8601 window the statistic accumulates over. QUOTE THEM. Must lie
+    # inside the model run window or the statistic comes back empty.
+    start: '2018-01-02T01:00:00'        # default: null (whole run)
+    end: '2018-01-03T01:00:00'          # default: null (whole run)
+
+    # Which particle statuses are counted. OceanTracker's vocabulary is
+    # notReleased, dead, outside_domain, outside_open_boundary, stationary,
+    # stranded_by_tide, on_bottom, moving.
+    #
+    # The default counts ONLY `moving`, so particles resting on the bed are
+    # excluded. Add on_bottom if a full-depth tow should catch resuspendable
+    # material - in shallow water that is a ~15% difference.
+    status_list: [moving]               # default: [moving]
+
+    # Ignore particles in water outside this depth range, in metres. Applied
+    # inside the model, so it is baked into the output: changing your mind means
+    # re-running every chunk. `cell_depth` in the condensed product lets you
+    # filter after the fact instead.
+    water_depth_min: 5                  # default: null
+    water_depth_max: null               # default: null
+
+    write_connectivity: false           # default: false
+
+    # Centre each release group's grid on its own source rather than on
+    # grid_center. Off means every group shares one absolute grid, which is what
+    # `condense` expects.
+    release_group_centered_grids: false # default: false
+
+    # Escape hatch: passed straight through to OceanTracker for parameters this
+    # schema does not model. Unvalidated - you are on your own in here.
+    extra: {}                           # default: {}
+
+  # -- 2D, tow below the surface --------------------------------------------
+  - name: surface_tow_2D
+    kind: gridded_2d
+    grid_center: [174.82211, -36.27802]
+    rows: 250
+    cols: 250
+    span: [0.05, 0.05]
+    # Tow window depth below the INSTANTANEOUS surface, in metres. Evaluated per
+    # particle per step, which is how a 2D stat expresses a tow.
+    near_seasurface: 5.0                # default: null
+
+  # -- 2D, tow above the bed ------------------------------------------------
+  # near_seabed is mutually exclusive with near_seasurface - they are different
+  # tow references, so comparing them takes two entries, as here.
+  - name: seabed_tow_2D
+    kind: gridded_2d
+    grid_center: [174.82211, -36.27802]
+    rows: 250
+    cols: 250
+    span: [0.05, 0.05]
+    # Tow window height above the true bed, in metres.
+    near_seabed: 5.0                    # default: null
+
+  # -- 2D, fixed depth window -----------------------------------------------
+  - name: fixed_depth_2D
+    kind: gridded_2d
+    grid_center: [174.82211, -36.27802]
+    rows: 250
+    cols: 250
+    span: [0.05, 0.05]
+    # Fixed [z_min, z_max] window. Cannot be combined with near_seasurface or
+    # near_seabed: OceanTracker rejects fixed-z together with a surface/bed
+    # reference.
+    z_range: [-10.0, -2.0]              # default: null
+
+  # -- 3D --------------------------------------------------------------------
+  # Bins the column into `layers`. All four vertical keys below are REQUIRED for
+  # a 3D statistic, and none of them may appear on a 2D one.
+  - name: layered_3D
+    kind: gridded_3d
+    grid_center: [174.82211, -36.27802]
+    rows: 100
+    cols: 100
+    span: [0.05, 0.05]
+
+    layers: 10                          # vertical bins between z_min and z_max
+    z_min: 0.0                          # needs z_min < z_max
+    z_max: 30.0
+
+    # geoid | surface | bottom. No default ON PURPOSE: OceanTracker changed its
+    # own default from 'surface' to 'geoid' after v0.5.3.6, so relying on it
+    # silently changes what the bins mean. With surface/bottom, z_min is a
+    # distance from that reference and must be >= 0.
+    vertical_range_measured_relative_to: geoid
+
+# ---------------------------------------------------------------- chunking --
+
+# How release points are split across jobs. Chunk n always covers points
+# [(n-1)k, nk), so the mapping is a property of this config rather than of the
+# order jobs happened to start.
+chunking:
+  # Sources per chunk. One is the default, and is what `condense` expects.
+  release_groups_per_chunk: 1           # default: 1
+
+# ---------------------------------------------------------------- analysis --
+
+# How the run's output becomes figures. Every key has a default, so the whole
+# block may be deleted.
+#
+# Deliberately EXCLUDED from the config fingerprint: none of it changes what the
+# model computes, so re-deciding a detection threshold must not invalidate a
+# finished 400-chunk run.
+analysis:
+  # Which `stats` entry to analyse. Required only when several are defined -
+  # as in this file.
+  statistic: whole_column_2D            # default: null
+
+  # When a sample counts as a detection:
+  #     concentration [copies/m3] * filtered_volume [m3] > threshold_copies
+  # where filtered_volume = individuals_per_source * copies_per_particle *
+  # sample_volume_m3, taking copies_per_particle from `source:` above so the
+  # model's discretisation and the analysis cannot disagree about it.
+  detection:
+    # Copies needed in the sample elute to call a detection.
+    threshold_copies: 10.0              # default: 10.0
+
+    # Physical water volume one sample represents.
+    sample_volume_m3: 1.0               # default: 1.0
+
+    # Colony size: how many shedding individuals one release point stands for.
+    individuals_per_source: 100.0       # default: 100.0
+
+  # Which optimiser places the sampling stations.
+  optimizer:
+    # greedy | greedy_reference | simulated_annealing | genetic
+    kind: greedy                        # default: greedy
+
+    # Stations to place. The optimiser always returns exactly this many; past
+    # saturation the surplus is reported as adding nothing rather than drawn.
+    n_stations: 3                       # default: 3
+
+    random_seed: 0                      # default: 0
+
+  # Ranges the diagnostic figures sweep over.
+  sweeps:
+    # Coverage fractions in (0, 1] to report station counts for.
+    coverage_levels: [0.125, 0.25, 0.5, 0.75]   # default: [0.125, 0.25, 0.5, 0.75]
+
+    # Longest station count on the coverage-vs-stations curve.
+    n_stations_max: 10                  # default: 10
+
+    # [start, stop, step] of log10 sample volume, so the default sweeps
+    # 1e-3 to 1e2 m3 in quarter decades. Needs stop > start and step > 0.
+    volume_exponents_m3: [-3.0, 2.0, 0.25]      # default: [-3.0, 2.0, 0.25]
+
+    # Random station draws used as the naive baseline.
+    n_naive_draws: 100                  # default: 100

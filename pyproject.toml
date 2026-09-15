@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edna-sampling"
+version = "0.1.0"
+description = "Plan and analyse eDNA sampling strategies from OceanTracker particle-tracking experiments"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Laurin Steidle", email = "laurin.steidle@uni-hamburg.de" }]
+keywords = ["eDNA", "oceantracker", "particle-tracking", "sampling-design", "SCHISM"]
+
+# oceantracker >=0.5.3.8 is a hard floor, not a preference:
+#   - 0.5.3.8 is the first release carrying the merged
+#     "relative-to-surface 3D stats" work that the previous pinned submodule
+#     (c9755848, v0.5.3.6-4) tracked on a feature branch;
+#   - it provides GriddedStats2D_timeBased's near_seasurface / near_seabed
+#     particle filters, which the 2D statistics depend on
+#     (see docs/2d-stats-assessment.md).
+# Note it also flipped the default of vertical_range_measured_relative_to from
+# "surface" to "geoid"; configs must state that parameter explicitly.
+dependencies = [
+  "numpy",
+  "scipy",
+  "xarray",
+  "netCDF4",
+  "matplotlib",
+  "shapely",     # release-point geometry
+  "pyyaml",      # experiment configs and machine profiles
+  "oceantracker>=0.5.3.8",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "pytest-cov"]
+notebooks = ["jupyter", "ipykernel", "ipython"]
+
+[project.scripts]
+edna = "edna_sampling.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/465b/eDNA_sampling_strategy"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
